@@ -332,6 +332,35 @@ body {
   color:var(--accent);
   transform:translateY(-1px);
 }
+.player-favorite-toggle-btn {
+  padding:8px 16px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.09);
+  background:radial-gradient(circle at top, rgba(255,255,255,0.02), rgba(6,9,24,0.96));
+  color:var(--text);
+  font-size:13px;
+  cursor:pointer;
+  transition:all 0.18s ease-out;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  white-space:nowrap;
+}
+.player-favorite-toggle-btn:hover {
+  border-color:var(--accent-border);
+  background:radial-gradient(circle at top, rgba(63,169,255,0.15), rgba(6,10,30,0.98));
+  color:var(--accent);
+  transform:translateY(-1px);
+}
+.player-favorite-toggle-btn[data-favorite="true"] {
+  background:radial-gradient(circle at top, rgba(255,179,71,0.1), rgba(6,9,24,0.96));
+  border-color:rgba(255,179,71,0.3);
+  color:var(--fav-on);
+}
+.player-favorite-toggle-btn[data-favorite="true"]:hover {
+  background:radial-gradient(circle at top, rgba(255,179,71,0.2), rgba(6,10,30,0.98));
+  border-color:rgba(255,179,71,0.5);
+}
 .player-favorites-drawer {
   position:fixed;
   top:0;
@@ -1001,6 +1030,8 @@ td.col-fav { width:34px; text-align:center; }
   .header-actions-row .icon-button .label-main { font-size:11px; }
   .player-search-input { font-size:12px; padding:8px 28px 8px 28px; }
   .player-favorites-btn { font-size:11px; padding:7px 12px; }
+  .player-favorite-toggle-btn { font-size:12px; padding:7px 14px; }
+  .player-favorite-toggle-btn span:last-child { font-size:11px; }
   .player-favorites-drawer { width:320px; max-width:85vw; }
   /* Activity Summary responsive */
   .activity-summary-grid {
@@ -1418,6 +1449,10 @@ const i18n = {
     playerFavorites: "Favoriler",
     playerFavoritesDrawer: "Favori Oyuncular",
     noFavoritePlayers: "Henüz favori oyuncu yok",
+    addFavorite: "Favorilere ekle",
+    removeFavorite: "Favorilerden çıkar",
+    addedToFavorites: "Favorilere eklendi",
+    removedFromFavorites: "Favorilerden çıkarıldı",
     randomMap: "Rastgele Map",
     sortBy: "Sırala:",
     showing: "gösteriliyor",
@@ -1500,6 +1535,10 @@ const i18n = {
     playerFavorites: "Favorites",
     playerFavoritesDrawer: "Favorite Players",
     noFavoritePlayers: "No favorite players yet",
+    addFavorite: "Add to favorites",
+    removeFavorite: "Remove from favorites",
+    addedToFavorites: "Added to favorites",
+    removedFromFavorites: "Removed from favorites",
     randomMap: "Random Map",
     sortBy: "Sort by:",
     showing: "showing",
@@ -2743,10 +2782,19 @@ async function showPlayerStats(playerName) {
     // Get activity summary
     const activitySummary = getActivitySummary(data);
     
+    // Check if player is favorite
+    const isFavorite = isPlayerFavorite(playerName);
+    
     // Build stats HTML
     const statsHtml = `
       <div style="padding:20px;">
-        <h2 style="margin-top:0; margin-bottom:20px; color:var(--text);">${playerName}</h2>
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px; flex-wrap:wrap;">
+          <h2 style="margin:0; color:var(--text); flex:1; min-width:200px;">${playerName}</h2>
+          <button id="playerFavoriteToggleBtn" class="player-favorite-toggle-btn" data-favorite="${isFavorite}">
+            <span style="font-size:18px;">${isFavorite ? '⭐' : '☆'}</span>
+            <span>${isFavorite ? (currentLang === 'tr' ? 'Favorilerden çıkar' : 'Remove from favorites') : (currentLang === 'tr' ? 'Favorilere ekle' : 'Add to favorites')}</span>
+          </button>
+        </div>
         
         <!-- Activity Summary -->
         <div style="margin-bottom:20px;">
@@ -2879,6 +2927,24 @@ async function showPlayerStats(playerName) {
       }
     };
     updateFinishes();
+    
+    // Handle favorite toggle button
+    const favoriteBtn = document.getElementById("playerFavoriteToggleBtn");
+    if (favoriteBtn) {
+      favoriteBtn.addEventListener("click", () => {
+        togglePlayerFavorite(playerName);
+        const newIsFavorite = isPlayerFavorite(playerName);
+        favoriteBtn.dataset.favorite = newIsFavorite;
+        const iconSpan = favoriteBtn.querySelector("span:first-child");
+        const textSpan = favoriteBtn.querySelector("span:last-child");
+        if (iconSpan) iconSpan.textContent = newIsFavorite ? '⭐' : '☆';
+        if (textSpan) {
+          const key = newIsFavorite ? 'removeFavorite' : 'addFavorite';
+          textSpan.textContent = lang[key];
+        }
+        showToast(lang[newIsFavorite ? 'addedToFavorites' : 'removedFromFavorites']);
+      });
+    }
     
     // Handle map link clicks
     mapModalInfo.querySelectorAll(".player-map-link").forEach(link => {
