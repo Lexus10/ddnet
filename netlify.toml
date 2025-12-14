@@ -1,8 +1,0 @@
-[build]
-  functions = "netlify/functions"
-
-[[redirects]]
-  from = "/api/fetch-player"
-  to = "/.netlify/functions/fetch-player"
-  status = 200
-
