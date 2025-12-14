@@ -174,7 +174,7 @@ body {
   border:1px solid rgba(63,169,255,0.5);
 }
 .icon-circle.steam {
-  border-radius:6px;
+  border-radius:50%;
 }
 .icon-circle.steam svg {
   width:16px;
@@ -1081,7 +1081,8 @@ td.col-fav { width:34px; text-align:center; }
             <button class="icon-button" id="openSteam">
               <div class="icon-circle steam">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path fill="#ffffff" d="M8 5v14l11-7z"/>
+                  <rect x="9" y="7.5" width="2.5" height="9" rx="1.2" ry="1.2" fill="#ffffff"/>
+                  <path fill="#ffffff" d="M12.5 8 Q12.5 7.5 13 7.5 L16.5 11.5 Q17 12 16.5 12.5 L13 16.5 Q12.5 17 12.5 16.5 Z"/>
                 </svg>
               </div>
               <span class="label-main" data-i18n="openSteam">DDNet'i Steam'de aç</span>
