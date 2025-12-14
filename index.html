@@ -173,30 +173,32 @@ body {
 }
 
 .icon-circle.steam {
-  background:linear-gradient(135deg, rgba(63,169,255,0.25), rgba(63,169,255,0.15));
-  box-shadow:0 0 10px rgba(63,169,255,0.4);
-  border:1px solid rgba(63,169,255,0.5);
-}
-.icon-circle.steam {
+  background:radial-gradient(circle at 30% 20%, #ffffff, #7fb9ff);
+  box-shadow:0 0 16px rgba(127,185,255,0.85);
+  border:1px solid rgba(255,255,255,0.2);
   border-radius:50%;
 }
 .icon-circle.steam svg {
   width:16px;
   height:16px;
   margin-left:2px;
-  filter: drop-shadow(0 0 2px rgba(255,255,255,0.5));
-}
-.icon-circle.github {
-  background:rgba(255,255,255,0.08);
-  box-shadow:0 0 6px rgba(200,200,255,0.3);
-  border:1px solid rgba(255,255,255,0.1);
-}
-.icon-circle.github svg {
-  filter: brightness(1.1) drop-shadow(0 0 2px rgba(200,200,255,0.4));
+  filter: brightness(1.1) drop-shadow(0 0 2px rgba(127,185,255,0.6));
 }
 .icon-circle.github {
   background:radial-gradient(circle at 30% 20%, #ffffff, #c0c9ff);
   box-shadow:0 0 16px rgba(200,200,255,0.85);
+  border:1px solid rgba(255,255,255,0.2);
+}
+.icon-circle.github svg {
+  filter: brightness(1.1) drop-shadow(0 0 2px rgba(200,200,255,0.4));
+}
+.icon-circle.settings {
+  background:radial-gradient(circle at 30% 20%, #ffffff, #c0c9ff);
+  box-shadow:0 0 16px rgba(200,200,255,0.85);
+  border:1px solid rgba(255,255,255,0.2);
+}
+.icon-circle.settings .icon {
+  filter: brightness(1.1) drop-shadow(0 0 2px rgba(200,200,255,0.4));
 }
 
 .search-row {
@@ -1284,7 +1286,7 @@ td.col-fav { width:34px; text-align:center; }
             </a>
 
             <button class="icon-button" id="settingsToggle">
-              <div class="icon-circle">
+              <div class="icon-circle settings">
                 <span class="icon">⚙</span>
               </div>
               <span class="label-main" data-i18n="settings">Ayarlar</span>
