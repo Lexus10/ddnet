@@ -2358,12 +2358,12 @@ async function showPlayerStats(playerName) {
   let lastFinishesDisplayed = 10;
   
   try {
-    // Use Netlify Function to fetch player stats (avoids CORS)
-    const apiUrl = `https://ddnet.org/players/?json2=${encodeURIComponent(playerName)}`;
-    const functionUrl = `/api/fetch-player?path=${encodeURIComponent(apiUrl)}`;
+    // Use Cloudflare Pages Function to fetch player stats (avoids CORS)
+    const functionUrl = `/api/player?name=${encodeURIComponent(playerName)}`;
     
     const response = await fetch(functionUrl);
     
+    // Handle 404 (player not found)
     if (response.status === 404) {
       mapModal.classList.remove("show");
       showToast(`${currentLang === 'tr' ? 'Oyuncu bulunamadı' : 'Player not found'}: ${playerName}`);
