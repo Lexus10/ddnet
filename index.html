@@ -2017,7 +2017,7 @@ async function searchPlayers(query) {
   
   try {
     // Use Netlify Function to fetch player stats (avoids CORS)
-    const apiUrl = `https://ddnet.org/players/${encodeURIComponent(query)}.json`;
+    const apiUrl = `https://ddnet.org/players/?json2=${encodeURIComponent(query)}`;
     const functionUrl = `/api/fetch-player?path=${encodeURIComponent(apiUrl)}`;
     
     const response = await fetch(functionUrl, {
@@ -2099,15 +2099,49 @@ function showPlayerSuggestions(players) {
   });
 }
 
+// Helper function to format time (seconds to mm:ss.xx)
+function formatTime(seconds) {
+  if (!seconds && seconds !== 0) return '-';
+  const mins = Math.floor(seconds / 60);
+  const secs = (seconds % 60).toFixed(2);
+  return `${mins}:${secs.padStart(5, '0')}`;
+}
+
+// Helper function to format timestamp
+function formatDate(timestamp) {
+  if (!timestamp) return '-';
+  const date = new Date(timestamp * 1000);
+  return date.toLocaleDateString(currentLang === 'tr' ? 'tr-TR' : 'en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
 async function showPlayerStats(playerName) {
+  const mapModal = document.getElementById("mapModal");
+  const mapModalTitle = document.getElementById("mapModalTitle");
+  const mapModalInfo = document.getElementById("mapModalInfo");
+  const t = lang;
+  
+  // Open modal immediately with loading
+  mapModalTitle.textContent = `👤 ${playerName}`;
+  mapModalInfo.innerHTML = `<div class="map-info-loading">🔄 ${t.statsLoading}</div>`;
+  mapModal.classList.add("show");
+  
+  let lastFinishesDisplayed = 10;
+  
   try {
     // Use Netlify Function to fetch player stats (avoids CORS)
-    const apiUrl = `https://ddnet.org/players/${encodeURIComponent(playerName)}.json`;
+    const apiUrl = `https://ddnet.org/players/?json2=${encodeURIComponent(playerName)}`;
     const functionUrl = `/api/fetch-player?path=${encodeURIComponent(apiUrl)}`;
     
     const response = await fetch(functionUrl);
     
     if (response.status === 404) {
+      mapModal.classList.remove("show");
       showToast(`${currentLang === 'tr' ? 'Oyuncu bulunamadı' : 'Player not found'}: ${playerName}`);
       return;
     }
@@ -2128,31 +2162,132 @@ async function showPlayerStats(playerName) {
       }
       
       console.error('Player stats error:', status, errorData);
+      mapModal.classList.remove("show");
       showToast(`${errorMsg}: ${playerName}`);
       return;
     }
     
     const data = await response.json();
     
-    // Show player stats in a modal or new section
+    // Render function for last finishes
+    const renderLastFinishes = (finishes, limit) => {
+      if (!finishes || finishes.length === 0) {
+        return `<div style="color:var(--muted); text-align:center; padding:20px;">${currentLang === 'tr' ? 'Henüz finish yok' : 'No finishes yet'}</div>`;
+      }
+      
+      const displayFinishes = finishes.slice(0, limit);
+      let html = '<div style="display:grid; gap:8px;">';
+      
+      displayFinishes.forEach(finish => {
+        html += `
+          <div style="background:var(--tag-bg); border:1px solid var(--tag-border); border-radius:8px; padding:12px; display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:8px; align-items:center; font-size:13px;">
+            <div style="font-weight:500; color:var(--text);">${finish.map || '-'}</div>
+            <div style="color:var(--text);">${formatTime(finish.time)}</div>
+            <div style="color:var(--muted); font-size:11px;">${finish.type || '-'} ${finish.country ? `(${finish.country})` : ''}</div>
+            <div style="color:var(--muted); font-size:11px;">${formatDate(finish.timestamp)}</div>
+          </div>
+        `;
+      });
+      
+      html += '</div>';
+      
+      if (finishes.length > limit) {
+        html += `
+          <button id="showMoreFinishes" style="margin-top:12px; padding:8px 16px; background:var(--accent-soft); border:1px solid var(--accent-border); border-radius:8px; color:var(--accent); cursor:pointer; font-size:13px; width:100%;">
+            ${currentLang === 'tr' ? `Daha fazla göster (+${Math.min(10, finishes.length - limit)})` : `Show more (+${Math.min(10, finishes.length - limit)})`}
+          </button>
+        `;
+      }
+      
+      return html;
+    };
+    
+    // Build stats HTML
     const statsHtml = `
       <div style="padding:20px;">
-        <h2 style="margin-top:0; margin-bottom:16px;">${playerName}</h2>
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-bottom:20px;">
-          <div style="background:var(--tag-bg); border:1px solid var(--tag-border); border-radius:12px; padding:12px; text-align:center;">
-            <div style="font-size:11px; color:var(--muted); text-transform:uppercase; margin-bottom:4px;">Puan</div>
-            <div style="font-size:20px; font-weight:600; color:var(--text);">${(data.points || data.Points || 0).toLocaleString()}</div>
-          </div>
-          <div style="background:var(--tag-bg); border:1px solid var(--tag-border); border-radius:12px; padding:12px; text-align:center;">
-            <div style="font-size:11px; color:var(--muted); text-transform:uppercase; margin-bottom:4px;">Finish</div>
-            <div style="font-size:20px; font-weight:600; color:var(--text);">${(data.finishes || data.Finishes || 0).toLocaleString()}</div>
-          </div>
-          <div style="background:var(--tag-bg); border:1px solid var(--tag-border); border-radius:12px; padding:12px; text-align:center;">
-            <div style="font-size:11px; color:var(--muted); text-transform:uppercase; margin-bottom:4px;">Top 10</div>
-            <div style="font-size:20px; font-weight:600; color:var(--text);">${(data.team_ranks ? data.team_ranks.length : 0) + (data.ranks ? data.ranks.length : 0)}</div>
+        <h2 style="margin-top:0; margin-bottom:20px; color:var(--text);">${playerName}</h2>
+        
+        <!-- Points Section -->
+        <div style="margin-bottom:20px;">
+          <h3 style="font-size:14px; color:var(--muted); text-transform:uppercase; margin-bottom:12px;">${currentLang === 'tr' ? 'Puanlar' : 'Points'}</h3>
+          <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;">
+            <div style="background:var(--tag-bg); border:1px solid var(--tag-border); border-radius:12px; padding:16px; text-align:center;">
+              <div style="font-size:11px; color:var(--muted); text-transform:uppercase; margin-bottom:4px;">${currentLang === 'tr' ? 'Sıra' : 'Rank'}</div>
+              <div style="font-size:20px; font-weight:600; color:var(--text);">${data.points?.rank ? '#' + data.points.rank.toLocaleString() : '-'}</div>
+            </div>
+            <div style="background:var(--tag-bg); border:1px solid var(--tag-border); border-radius:12px; padding:16px; text-align:center;">
+              <div style="font-size:11px; color:var(--muted); text-transform:uppercase; margin-bottom:4px;">${currentLang === 'tr' ? 'Puan' : 'Points'}</div>
+              <div style="font-size:20px; font-weight:600; color:var(--text);">${(data.points?.points || 0).toLocaleString()}</div>
+            </div>
+            <div style="background:var(--tag-bg); border:1px solid var(--tag-border); border-radius:12px; padding:16px; text-align:center;">
+              <div style="font-size:11px; color:var(--muted); text-transform:uppercase; margin-bottom:4px;">${currentLang === 'tr' ? 'Toplam' : 'Total'}</div>
+              <div style="font-size:20px; font-weight:600; color:var(--text);">${(data.points?.total || 0).toLocaleString()}</div>
+            </div>
           </div>
         </div>
-        <div style="text-align:center;">
+        
+        <!-- Team Rank & Rank Section -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;">
+          <div style="background:var(--tag-bg); border:1px solid var(--tag-border); border-radius:12px; padding:16px;">
+            <div style="font-size:11px; color:var(--muted); text-transform:uppercase; margin-bottom:8px;">${currentLang === 'tr' ? 'Takım Sırası' : 'Team Rank'}</div>
+            <div style="font-size:18px; font-weight:600; color:var(--text);">
+              ${data.team_rank?.rank ? '#' + data.team_rank.rank.toLocaleString() : '-'}
+            </div>
+            <div style="font-size:13px; color:var(--muted); margin-top:4px;">
+              ${(data.team_rank?.points || 0).toLocaleString()} ${currentLang === 'tr' ? 'puan' : 'points'}
+            </div>
+          </div>
+          <div style="background:var(--tag-bg); border:1px solid var(--tag-border); border-radius:12px; padding:16px;">
+            <div style="font-size:11px; color:var(--muted); text-transform:uppercase; margin-bottom:8px;">${currentLang === 'tr' ? 'Solo Sırası' : 'Solo Rank'}</div>
+            <div style="font-size:18px; font-weight:600; color:var(--text);">
+              ${data.rank?.rank ? '#' + data.rank.rank.toLocaleString() : '-'}
+            </div>
+            <div style="font-size:13px; color:var(--muted); margin-top:4px;">
+              ${(data.rank?.points || 0).toLocaleString()} ${currentLang === 'tr' ? 'puan' : 'points'}
+            </div>
+          </div>
+        </div>
+        
+        <!-- Favorite Server -->
+        ${data.favorite_server?.server ? `
+          <div style="margin-bottom:20px;">
+            <div style="font-size:11px; color:var(--muted); text-transform:uppercase; margin-bottom:8px;">${currentLang === 'tr' ? 'Favori Sunucu' : 'Favorite Server'}</div>
+            <div style="background:var(--tag-bg); border:1px solid var(--tag-border); border-radius:12px; padding:12px; color:var(--text);">
+              ${data.favorite_server.server}
+            </div>
+          </div>
+        ` : ''}
+        
+        <!-- First Finish -->
+        ${data.first_finish ? `
+          <div style="margin-bottom:20px;">
+            <div style="font-size:11px; color:var(--muted); text-transform:uppercase; margin-bottom:8px;">${currentLang === 'tr' ? 'İlk Finish' : 'First Finish'}</div>
+            <div style="background:var(--tag-bg); border:1px solid var(--tag-border); border-radius:12px; padding:12px;">
+              <div style="font-weight:500; color:var(--text); margin-bottom:4px;">${data.first_finish.map || '-'}</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:13px;">
+                <div>
+                  <span style="color:var(--muted);">${currentLang === 'tr' ? 'Süre:' : 'Time:'}</span>
+                  <span style="color:var(--text); margin-left:4px;">${formatTime(data.first_finish.time)}</span>
+                </div>
+                <div>
+                  <span style="color:var(--muted);">${currentLang === 'tr' ? 'Tarih:' : 'Date:'}</span>
+                  <span style="color:var(--text); margin-left:4px;">${formatDate(data.first_finish.timestamp)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ` : ''}
+        
+        <!-- Last Finishes -->
+        <div style="margin-bottom:20px;">
+          <div style="font-size:11px; color:var(--muted); text-transform:uppercase; margin-bottom:12px;">${currentLang === 'tr' ? 'Son Finishler' : 'Last Finishes'}</div>
+          <div id="lastFinishesContainer">
+            ${renderLastFinishes(data.last_finishes, lastFinishesDisplayed)}
+          </div>
+        </div>
+        
+        <!-- DDNet Link -->
+        <div style="text-align:center; margin-top:24px;">
           <a href="https://ddnet.org/players/${encodeURIComponent(playerName)}/" target="_blank" style="display:inline-flex; align-items:center; gap:6px; padding:8px 16px; background:var(--accent-soft); border:1px solid var(--accent-border); border-radius:999px; color:var(--accent); text-decoration:none; font-size:13px;">
             ${currentLang === 'tr' ? 'DDNet\'te Görüntüle →' : 'View on DDNet →'}
           </a>
@@ -2160,18 +2295,29 @@ async function showPlayerStats(playerName) {
       </div>
     `;
     
-    // Use existing map modal for player stats
-    const mapModal = document.getElementById("mapModal");
-    const mapModalTitle = document.getElementById("mapModalTitle");
-    const mapModalInfo = document.getElementById("mapModalInfo");
-    
-    mapModalTitle.textContent = `👤 ${playerName} - İstatistikler`;
     mapModalInfo.innerHTML = statsHtml;
-    mapModal.classList.add("show");
+    
+    // Handle "Show more" button with closure
+    const updateFinishes = () => {
+      const showMoreBtn = document.getElementById("showMoreFinishes");
+      if (showMoreBtn) {
+        showMoreBtn.addEventListener("click", () => {
+          lastFinishesDisplayed += 10;
+          const container = document.getElementById("lastFinishesContainer");
+          if (container) {
+            container.innerHTML = renderLastFinishes(data.last_finishes, lastFinishesDisplayed);
+            // Re-attach event listener recursively
+            updateFinishes();
+          }
+        });
+      }
+    };
+    updateFinishes();
     
   } catch (error) {
     console.error('Player stats error:', error);
-    showToast(`Oyuncu bilgileri yüklenemedi: ${playerName}`);
+    mapModal.classList.remove("show");
+    showToast(`${currentLang === 'tr' ? 'Oyuncu bilgileri yüklenemedi' : 'Failed to load player info'}: ${playerName}`);
   }
 }
 
