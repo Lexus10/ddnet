@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
+<script>
+// Hostname bazlı redirect: ddnet.pages.dev -> ddnet-archive.xyz
+(function() {
+  if (window.location.hostname === 'ddnet.pages.dev') {
+    var newUrl = 'https://ddnet-archive.xyz' + window.location.pathname + window.location.search + window.location.hash;
+    window.location.replace(newUrl);
+  }
+})();
+</script>
 <meta charset="UTF-8" />
 <title>DDNet Map Arşivi</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
